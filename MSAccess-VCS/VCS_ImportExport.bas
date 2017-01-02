@@ -13,6 +13,7 @@ Private Const DebugOutput As Boolean = False
 'this is used in ExportAllSource
 'Causes the VCS_ code to be exported
 Private Const ArchiveMyself As Boolean = False
+Private StatusLine As String
 
 
 'returns true if named module is NOT part of the VCS code
@@ -34,6 +35,22 @@ Private Function IsNotVCS(ByVal name As String) As Boolean
     End If
 
 End Function
+Public Sub VCS_ProcessOn(isOn As Boolean)
+    DoCmd.Hourglass isOn
+    StatusLine = ""
+End Sub
+Public Sub VCS_StatusMessage(msg As String, Optional newline As Boolean = True)
+    StatusLine = StatusLine & msg
+    
+    SysCmd acSysCmdSetStatus, StatusLine
+    
+    If (newline) Then
+        Debug.Print msg
+        StatusLine = ""
+    Else
+        Debug.Print msg;
+    End If
+End Sub
 
 ' Main entry point for EXPORT. Export all forms, reports, queries,
 ' macros, modules, and lookup tables to `source` folder under the
@@ -55,6 +72,7 @@ Public Sub ExportAllSource()
 
     Set Db = CurrentDb
 
+    VCS_ProcessOn True
     CloseFormsReports
     'InitVCS_UsingUcs2
 
@@ -65,7 +83,7 @@ Public Sub ExportAllSource()
 
     obj_path = source_path & "queries\"
     VCS_Dir.VCS_ClearTextFilesFromDir obj_path, "bas"
-    Debug.Print VCS_String.VCS_PadRight("Exporting queries...", 24);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Exporting queries...", 24), False
     obj_count = 0
     For Each qry In Db.QueryDefs
         DoEvents
@@ -74,9 +92,9 @@ Public Sub ExportAllSource()
             obj_count = obj_count + 1
         End If
     Next
-    Debug.Print VCS_String.VCS_PadRight("Sanitizing...", 15);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Sanitizing...", 15), False
     VCS_IE_Functions.VCS_SanitizeTextFiles obj_path, "bas"
-    Debug.Print "[" & obj_count & "]"
+    VCS_StatusMessage "[" & obj_count & "]"
 
     
     For Each obj_type In Split( _
@@ -93,7 +111,7 @@ Public Sub ExportAllSource()
         obj_path = source_path & obj_type_label & "\"
         obj_count = 0
         VCS_Dir.VCS_ClearTextFilesFromDir obj_path, "bas"
-        Debug.Print VCS_String.VCS_PadRight("Exporting " & obj_type_label & "...", 24);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Exporting " & obj_type_label & "...", 24), False
         For Each doc In Db.Containers(obj_type_name).Documents
             DoEvents
             If (Left$(doc.name, 1) <> "~") And _
@@ -113,11 +131,11 @@ Public Sub ExportAllSource()
             End If
         Next
 
-		Debug.Print VCS_String.VCS_PadRight("Sanitizing...", 15);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Sanitizing...", 15), False
         If obj_type_label <> "modules" Then
             VCS_IE_Functions.VCS_SanitizeTextFiles obj_path, "bas"
         End If
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     Next
     
     VCS_Reference.VCS_ExportReferences source_path
@@ -148,7 +166,7 @@ Public Sub ExportAllSource()
     Dim IncludeTablesCol As Collection
     Set IncludeTablesCol = StrSetToCol(INCLUDE_TABLES, ",")
     
-    Debug.Print VCS_String.VCS_PadRight("Exporting " & obj_type_label & "...", 24);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Exporting " & obj_type_label & "...", 24), False
     
     For Each td In tds
         ' This is not a system table
@@ -166,7 +184,7 @@ Public Sub ExportAllSource()
                 ElseIf (Len(Replace(INCLUDE_TABLES, " ", vbNullString)) > 0) And INCLUDE_TABLES <> "*" Then
                     DoEvents
                     On Error GoTo Err_TableNotFound
-                    If InCollection(IncludeTablesCol,td.name) Then
+                    If InCollection(IncludeTablesCol, td.name) Then
                         VCS_Table.VCS_ExportTableData CStr(td.name), source_path & "tables\"
                         obj_data_count = obj_data_count + 1
                     End If
@@ -184,11 +202,11 @@ Err_TableNotFound:
     Next
     Debug.Print "[" & obj_count & "]"
     If obj_data_count > 0 Then
-      Debug.Print VCS_String.VCS_PadRight("Exported data...", 24) & "[" & obj_data_count & "]"
+      VCS_StatusMessage VCS_String.VCS_PadRight("Exported data...", 24) & "[" & obj_data_count & "]"
     End If
     
     
-    Debug.Print VCS_String.VCS_PadRight("Exporting Relations...", 24);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Exporting Relations...", 24), False
     obj_count = 0
     obj_path = source_path & "relations\"
     VCS_Dir.VCS_MkDirIfNotExist Left$(obj_path, InStrRev(obj_path, "\"))
@@ -209,9 +227,10 @@ Err_TableNotFound:
             obj_count = obj_count + 1
         End If
     Next
-    Debug.Print "[" & obj_count & "]"
+    VCS_StatusMessage "[" & obj_count & "]"
     
-    Debug.Print "Done."
+    VCS_StatusMessage "Done."
+    VCS_ProcessOn False
 End Sub
 
 
@@ -233,6 +252,7 @@ Public Sub ImportAllSource()
 
     Set FSO = CreateObject("Scripting.FileSystemObject")
 
+    VCS_ProcessOn True
     CloseFormsReports
     'InitVCS_UsingUcs2
 
@@ -245,7 +265,7 @@ Public Sub ImportAllSource()
     Debug.Print
     
     If Not VCS_Reference.VCS_ImportReferences(source_path) Then
-        Debug.Print "Info: no references file in " & source_path
+        VCS_StatusMessage "Info: no references file in " & source_path
         Debug.Print
     End If
 
@@ -256,7 +276,7 @@ Public Sub ImportAllSource()
     tempFilePath = VCS_File.VCS_TempFile()
     
     If Len(fileName) > 0 Then
-        Debug.Print VCS_String.VCS_PadRight("Importing queries...", 24);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Importing queries...", 24), False
         obj_count = 0
         Do Until Len(fileName) = 0
             DoEvents
@@ -267,7 +287,7 @@ Public Sub ImportAllSource()
             obj_count = obj_count + 1
             fileName = Dir$()
         Loop
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     End If
     
     VCS_Dir.VCS_DelIfExist tempFilePath
@@ -284,21 +304,21 @@ Public Sub ImportAllSource()
                 If obj_count = 0 Then
                     Debug.Print
                 End If
-                Debug.Print "  [debug] table " & obj_name;
+                VCS_StatusMessage "  [debug] table " & obj_name, False
                 Debug.Print
             End If
             VCS_Table.VCS_ImportTableDef CStr(obj_name), obj_path
             obj_count = obj_count + 1
             fileName = Dir$()
         Loop
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     End If
     
     
     ' restore linked tables - we must have access to the remote store to import these!
     fileName = Dir$(obj_path & "*.LNKD")
     If Len(fileName) > 0 Then
-        Debug.Print VCS_String.VCS_PadRight("Importing Linked tabledefs...", 24);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Importing Linked tabledefs...", 24), False
         obj_count = 0
         Do Until Len(fileName) = 0
             obj_name = Mid$(fileName, 1, InStrRev(fileName, ".") - 1)
@@ -313,7 +333,7 @@ Public Sub ImportAllSource()
             obj_count = obj_count + 1
             fileName = Dir$()
         Loop
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     End If
     
     
@@ -322,7 +342,7 @@ Public Sub ImportAllSource()
     obj_path = source_path & "tables\"
     fileName = Dir$(obj_path & "*.txt")
     If Len(fileName) > 0 Then
-        Debug.Print VCS_String.VCS_PadRight("Importing tables...", 24);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Importing tables...", 24), False
         obj_count = 0
         Do Until Len(fileName) = 0
             DoEvents
@@ -331,14 +351,14 @@ Public Sub ImportAllSource()
             obj_count = obj_count + 1
             fileName = Dir$()
         Loop
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     End If
     
     'load Data Macros - not DRY!
     obj_path = source_path & "tbldef\"
     fileName = Dir$(obj_path & "*.dm")
     If Len(fileName) > 0 Then
-        Debug.Print VCS_String.VCS_PadRight("Importing Data Macros...", 24);
+        VCS_StatusMessage VCS_String.VCS_PadRight("Importing Data Macros...", 24), False
         obj_count = 0
         Do Until Len(fileName) = 0
             DoEvents
@@ -348,7 +368,7 @@ Public Sub ImportAllSource()
             obj_count = obj_count + 1
             fileName = Dir$()
         Loop
-        Debug.Print "[" & obj_count & "]"
+        VCS_StatusMessage "[" & obj_count & "]"
     End If
     
 
@@ -370,7 +390,7 @@ Public Sub ImportAllSource()
             
         fileName = Dir$(obj_path & "*.bas")
         If Len(fileName) > 0 Then
-            Debug.Print VCS_String.VCS_PadRight("Importing " & obj_type_label & "...", 24);
+            VCS_StatusMessage VCS_String.VCS_PadRight("Importing " & obj_type_label & "...", 24), False
             obj_count = 0
             Do Until Len(fileName) = 0
                 ' DoEvents no good idea!
@@ -390,13 +410,13 @@ Public Sub ImportAllSource()
                 End If
                 fileName = Dir$()
             Loop
-            Debug.Print "[" & obj_count & "]"
+            VCS_StatusMessage "[" & obj_count & "]"
         
         End If
     Next
     
     'import Print Variables
-    Debug.Print VCS_String.VCS_PadRight("Importing Print Vars...", 24);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Importing Print Vars...", 24), False
     obj_count = 0
     
     obj_path = source_path & "reports\"
@@ -408,10 +428,10 @@ Public Sub ImportAllSource()
         obj_count = obj_count + 1
         fileName = Dir$()
     Loop
-    Debug.Print "[" & obj_count & "]"
+    VCS_StatusMessage "[" & obj_count & "]"
     
     'import relations
-    Debug.Print VCS_String.VCS_PadRight("Importing Relations...", 24);
+    VCS_StatusMessage VCS_String.VCS_PadRight("Importing Relations...", 24), False
     obj_count = 0
     obj_path = source_path & "relations\"
     fileName = Dir$(obj_path & "*.txt")
@@ -421,10 +441,11 @@ Public Sub ImportAllSource()
         obj_count = obj_count + 1
         fileName = Dir$()
     Loop
-    Debug.Print "[" & obj_count & "]"
+    VCS_StatusMessage "[" & obj_count & "]"
     DoEvents
     
-    Debug.Print "Done."
+    VCS_StatusMessage "Done."
+    VCS_ProcessOn False
 End Sub
 
 ' Main entry point for ImportProject.
