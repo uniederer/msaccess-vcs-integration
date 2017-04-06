@@ -23,7 +23,7 @@ Public Function VCS_ImportReferences(ByVal obj_path As String) As Boolean
         Exit Function
     End If
     Set FSO = CreateObject("Scripting.FileSystemObject")
-    Set InFile = FSO.OpenTextFile(obj_path & fileName, iomode:=ForReading, create:=False, Format:=TristateFalse)
+    Set InFile = FSO.OpenTextFile(obj_path & fileName, iomode:=ForReading, Create:=False, Format:=TristateFalse)
     
 On Error GoTo failed_guid
     Do Until InFile.AtEndOfStream

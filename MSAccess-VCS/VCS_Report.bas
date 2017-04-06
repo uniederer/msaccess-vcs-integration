@@ -117,7 +117,7 @@ Public Sub VCS_ImportPrintVars(ByVal obj_name As String, ByVal filePath As Strin
   End If
   
   Dim InFile As Object
-  Set InFile = FSO.OpenTextFile(filePath, iomode:=ForReading, create:=False, Format:=TristateFalse)
+  Set InFile = FSO.OpenTextFile(filePath, iomode:=ForReading, Create:=False, Format:=TristateFalse)
   
   'print out print var values
   DM.intOrientation = InFile.ReadLine

@@ -24,7 +24,7 @@ Public Sub VCS_ExportLinkedTable(ByVal tbl_name As String, ByVal obj_path As Str
     
     Set OutFile = FSO.CreateTextFile(tempFilePath, overwrite:=True, Unicode:=True)
     
-    OutFile.Write CurrentDb.TableDefs(tbl_name).name
+    OutFile.Write CurrentDb.TableDefs(tbl_name).Name
     OutFile.Write vbCrLf
     
     If InStr(1, CurrentDb.TableDefs(tbl_name).connect, "DATABASE=" & CurrentProject.Path) Then
@@ -105,7 +105,7 @@ Private Function TableExists(ByVal TName As String) As Boolean
     On Error Resume Next
      
      ' See if the name is in the Tables collection.
-    Test = Db.TableDefs(TName).name
+    Test = Db.TableDefs(TName).Name
     If Err.Number <> NAME_NOT_IN_COLLECTION Then Found = True
     
     ' Reset the error variable.
@@ -114,10 +114,10 @@ Private Function TableExists(ByVal TName As String) As Boolean
     TableExists = Found
 End Function
 
-' Build SQL to export `tbl_name` sorted by each field from first to last
+' Build SQL to export `tbl_name` sorted by each Field from first to last
 Private Function TableExportSql(ByVal tbl_name As String) As String
     Dim rs As Object ' DAO.Recordset
-    Dim fieldObj As Object ' DAO.Field
+    Dim FieldObj As Object ' DAO.Field
     Dim sb() As String, Count As Integer
 
     Set rs = CurrentDb.OpenRecordset(tbl_name)
@@ -126,19 +126,19 @@ Private Function TableExportSql(ByVal tbl_name As String) As String
     VCS_String.VCS_Sb_Append sb, "SELECT "
     
     Count = 0
-    For Each fieldObj In rs.Fields
+    For Each FieldObj In rs.Fields
         If Count > 0 Then VCS_String.VCS_Sb_Append sb, ", "
-        VCS_String.VCS_Sb_Append sb, "[" & fieldObj.name & "]"
+        VCS_String.VCS_Sb_Append sb, "[" & FieldObj.Name & "]"
         Count = Count + 1
     Next
     
     VCS_String.VCS_Sb_Append sb, " FROM [" & tbl_name & "] ORDER BY "
     
     Count = 0
-    For Each fieldObj In rs.Fields
+    For Each FieldObj In rs.Fields
         DoEvents
         If Count > 0 Then VCS_String.VCS_Sb_Append sb, ", "
-        VCS_String.VCS_Sb_Append sb, "[" & fieldObj.name & "]"
+        VCS_String.VCS_Sb_Append sb, "[" & FieldObj.Name & "]"
         Count = Count + 1
     Next
 
@@ -150,7 +150,7 @@ Public Sub VCS_ExportTableData(ByVal tbl_name As String, ByVal obj_path As Strin
     Dim FSO As Object
     Dim OutFile As Object
     Dim rs As DAO.Recordset ' DAO.Recordset
-    Dim fieldObj As Object ' DAO.Field
+    Dim FieldObj As Object ' DAO.Field
     Dim c As Long, Value As Variant
     
     ' Checks first
@@ -175,21 +175,21 @@ Public Sub VCS_ExportTableData(ByVal tbl_name As String, ByVal obj_path As Strin
     Set OutFile = FSO.CreateTextFile(tempFileName, overwrite:=True, Unicode:=True)
 
     c = 0
-    For Each fieldObj In rs.Fields
+    For Each FieldObj In rs.Fields
         If c <> 0 Then OutFile.Write vbTab
         c = c + 1
-        OutFile.Write fieldObj.name
+        OutFile.Write FieldObj.Name
     Next
     OutFile.Write vbCrLf
 
     rs.MoveFirst
     Do Until rs.EOF
         c = 0
-        For Each fieldObj In rs.Fields
+        For Each FieldObj In rs.Fields
             DoEvents
             If c <> 0 Then OutFile.Write vbTab
             c = c + 1
-            Value = rs(fieldObj.name)
+            Value = rs(FieldObj.Name)
             If IsNull(Value) Then
                 Value = vbNullString
             Else
@@ -224,7 +224,7 @@ Public Sub VCS_ImportLinkedTable(ByVal tblName As String, ByRef obj_path As Stri
     
     VCS_ConvertUtf8Ucs2 obj_path & tblName & ".LNKD", tempFilePath
     ' open file for reading with Create=False, Unicode=True (USC-2 Little Endian format)
-    Set InFile = FSO.OpenTextFile(tempFilePath, iomode:=ForReading, create:=False, Format:=TristateTrue)
+    Set InFile = FSO.OpenTextFile(tempFilePath, iomode:=ForReading, Create:=False, Format:=TristateTrue)
     
     On Error GoTo err_notable:
     DoCmd.DeleteObject acTable, tblName
@@ -266,7 +266,7 @@ Err_CreateLinkedTable_Fin:
     Fields = InFile.ReadLine()
     Dim Field As Variant
     Dim sql As String
-    sql = "CREATE INDEX __uniqueindex ON " & td.name & " ("
+    sql = "CREATE INDEX __uniqueindex ON " & td.Name & " ("
     
     For Each Field In Split(Fields, ";+")
         sql = sql & "[" & Field & "]" & ","
@@ -296,7 +296,7 @@ End Sub
 Public Sub VCS_ImportTableData(ByVal tblName As String, ByVal obj_path As String)
     Dim Db As Object ' DAO.Database
     Dim rs As Object ' DAO.Recordset
-    Dim fieldObj As Object ' DAO.Field
+    Dim FieldObj As Object ' DAO.Field
     Dim FSO As Object
     Dim InFile As Object
     Dim c As Long, buf As String, Values() As String, Value As Variant
@@ -307,7 +307,7 @@ Public Sub VCS_ImportTableData(ByVal tblName As String, ByVal obj_path As String
     tempFileName = VCS_File.VCS_TempFile()
     VCS_File.VCS_ConvertUtf8Ucs2 obj_path & tblName & ".txt", tempFileName
     ' open file for reading with Create=False, Unicode=True (USC-2 Little Endian format)
-    Set InFile = FSO.OpenTextFile(tempFileName, iomode:=ForReading, create:=False, Format:=TristateTrue)
+    Set InFile = FSO.OpenTextFile(tempFileName, iomode:=ForReading, Create:=False, Format:=TristateTrue)
     Set Db = CurrentDb
 
     Db.Execute "DELETE FROM [" & tblName & "]"
@@ -319,7 +319,7 @@ Public Sub VCS_ImportTableData(ByVal tblName As String, ByVal obj_path As String
             Values = Split(buf, vbTab)
             c = 0
             rs.AddNew
-            For Each fieldObj In rs.Fields
+            For Each FieldObj In rs.Fields
                 DoEvents
                 Value = Values(c)
                 If Len(Value) = 0 Then
@@ -329,7 +329,7 @@ Public Sub VCS_ImportTableData(ByVal tblName As String, ByVal obj_path As String
                     Value = Replace(Value, "\n", vbCrLf)
                     Value = Replace(Value, "\\", "\")
                 End If
-                rs(fieldObj.name) = Value
+                rs(FieldObj.Name) = Value
                 c = c + 1
             Next
             rs.Update
@@ -340,3 +340,4 @@ Public Sub VCS_ImportTableData(ByVal tblName As String, ByVal obj_path As String
     InFile.Close
     FSO.DeleteFile tempFileName
 End Sub
+

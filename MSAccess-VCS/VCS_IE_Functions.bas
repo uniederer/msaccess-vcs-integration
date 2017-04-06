@@ -16,7 +16,6 @@ Private Const StripPublishOption As Boolean = True
 Public Const ForReading = 1, ForWriting = 2, ForAppending = 8
 Public Const TristateTrue = -1, TristateFalse = 0, TristateUseDefault = -2
 
-
 ' Can we export without closing the form?
 
 ' Export a database object with optional UCS2-to-UTF-8 conversion.
@@ -108,7 +107,7 @@ Public Sub VCS_SanitizeTextFiles(ByVal Path As String, ByVal Ext As String)
         obj_name = Mid$(fileName, 1, InStrRev(fileName, ".") - 1)
 
         Dim InFile As Object
-        Set InFile = FSO.OpenTextFile(Path & obj_name & "." & Ext, iomode:=ForReading, create:=False, Format:=TristateFalse)
+        Set InFile = FSO.OpenTextFile(Path & obj_name & "." & Ext, iomode:=ForReading, Create:=False, Format:=TristateFalse)
         Dim OutFile As Object
         Set OutFile = FSO.CreateTextFile(Path & obj_name & ".sanitize", overwrite:=True, Unicode:=False)
     
