@@ -4,7 +4,15 @@ Option Compare Database
 Option Private Module
 Option Explicit
 
-
+Public Function VCS_ProjectName() As String
+    Dim Pos As Variant
+    
+    VCS_ProjectName = CurrentProject.Name
+    Pos = InStrRev(VCS_ProjectName, ".")
+    If Pos > 0 Then
+        VCS_ProjectName = Mid(VCS_ProjectName, 1, Pos - 1)
+    End If
+End Function
 ' Path/Directory of the current database file.
 Public Function VCS_ProjectPath() As String
     VCS_ProjectPath = CurrentProject.Path
